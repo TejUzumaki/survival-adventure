@@ -1,0 +1,87 @@
+import * as THREE from 'three';
+
+export class PlayerController {
+    constructor(scene, camera, mesh, worldGenerator) {
+        this.scene = scene;
+        this.camera = camera;
+        this.mesh = mesh;
+        this.worldGenerator = worldGenerator; // Injected for terrain heights
+
+        // Movement Parameters
+        this.walkSpeed = 5.5; // Increased walk speed
+        this.sprintSpeed = 9.0;
+        this.rotationSpeed = 15.0;
+        this.gravity = -20.0;
+        this.jumpForce = 8.0;
+        this.isGrounded = true;
+        this.velocityY = 0;
+        this.isJumping = false;
+
+        // Raycasting
+        this.raycaster = new THREE.Raycaster();
+        this.downVector = new THREE.Vector3(0, -1, 0);
+        
+        // Temp vectors
+        this._tempMove = new THREE.Vector3();
+        this._tempForward = new THREE.Vector3();
+        this._tempRight = new THREE.Vector3();
+        this._targetRotation = new THREE.Quaternion();
+    }
+
+    update(delta, inputVector, isSprinting) {
+        this._handleGroundCheck();
+        this._handleGravity(delta);
+        this._handleMovement(delta, inputVector, isSprinting);
+    }
+
+    _handleGroundCheck() {
+        const terrainHeight = this.worldGenerator.getHeightAt(this.mesh.position.x, this.mesh.position.z);
+        
+        if (this.mesh.position.y <= terrainHeight + 0.05) {
+            this.mesh.position.y = terrainHeight;
+            this.velocityY = 0;
+            if (!this.isGrounded) this.isJumping = false; // Landing
+            this.isGrounded = true;
+        } else {
+            this.isGrounded = false;
+        }
+    }
+
+    _handleGravity(delta) {
+        if (!this.isGrounded) {
+            this.velocityY += this.gravity * delta;
+            this.mesh.position.y += this.velocityY * delta;
+        }
+    }
+
+    _handleMovement(delta, inputVector, isSprinting) {
+        const speed = isSprinting ? this.sprintSpeed : this.walkSpeed;
+
+        this.camera.getWorldDirection(this._tempForward);
+        this._tempForward.y = 0;
+        this._tempForward.normalize();
+        
+        this._tempRight.crossVectors(this._tempForward, this.mesh.up).normalize();
+
+        this._tempMove.set(0, 0, 0);
+        this._tempMove.addScaledVector(this._tempForward, -inputVector.y);
+        this._tempMove.addScaledVector(this._tempRight, inputVector.x);
+        
+        if (this._tempMove.lengthSq() > 0) {
+            this._tempMove.normalize();
+            this.mesh.position.addScaledVector(this._tempMove, speed * delta);
+
+            const targetAngle = Math.atan2(this._tempMove.x, this._tempMove.z);
+            this._targetRotation.setFromEuler(new THREE.Euler(0, targetAngle, 0, 'YXZ'));
+            this.mesh.quaternion.slerp(this._targetRotation, this.rotationSpeed * delta);
+        }
+    }
+
+    jump() {
+        if (this.isGrounded) {
+            this.velocityY = this.jumpForce;
+            this.isGrounded = false;
+            this.isJumping = true;
+        }
+    }
+}
