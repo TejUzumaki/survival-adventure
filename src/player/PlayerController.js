@@ -5,10 +5,9 @@ export class PlayerController {
         this.scene = scene;
         this.camera = camera;
         this.mesh = mesh;
-        this.worldGenerator = worldGenerator; // Injected for terrain heights
+        this.worldGenerator = worldGenerator;
 
-        // Movement Parameters
-        this.walkSpeed = 5.5; // Increased walk speed
+        this.walkSpeed = 5.5;
         this.sprintSpeed = 9.0;
         this.rotationSpeed = 15.0;
         this.gravity = -20.0;
@@ -17,11 +16,9 @@ export class PlayerController {
         this.velocityY = 0;
         this.isJumping = false;
 
-        // Raycasting
         this.raycaster = new THREE.Raycaster();
         this.downVector = new THREE.Vector3(0, -1, 0);
         
-        // Temp vectors
         this._tempMove = new THREE.Vector3();
         this._tempForward = new THREE.Vector3();
         this._tempRight = new THREE.Vector3();
@@ -36,11 +33,10 @@ export class PlayerController {
 
     _handleGroundCheck() {
         const terrainHeight = this.worldGenerator.getHeightAt(this.mesh.position.x, this.mesh.position.z);
-        
         if (this.mesh.position.y <= terrainHeight + 0.05) {
             this.mesh.position.y = terrainHeight;
             this.velocityY = 0;
-            if (!this.isGrounded) this.isJumping = false; // Landing
+            if (!this.isGrounded) this.isJumping = false;
             this.isGrounded = true;
         } else {
             this.isGrounded = false;
@@ -69,8 +65,34 @@ export class PlayerController {
         
         if (this._tempMove.lengthSq() > 0) {
             this._tempMove.normalize();
-            this.mesh.position.addScaledVector(this._tempMove, speed * delta);
+            
+            // Calculate intended next position
+            let nextX = this.mesh.position.x + this._tempMove.x * speed * delta;
+            let nextZ = this.mesh.position.z + this._tempMove.z * speed * delta;
+            
+            // Check Collisions
+            let isBlocked = false;
+            const playerRadius = 0.5;
+            
+            for (const collider of this.worldGenerator.colliders) {
+                const dx = nextX - collider.x;
+                const dz = nextZ - collider.z;
+                const distSq = dx * dx + dz * dz;
+                const minDist = collider.radius + playerRadius;
+                
+                if (distSq < minDist * minDist) {
+                    isBlocked = true;
+                    break;
+                }
+            }
+            
+            // Apply movement if not blocked
+            if (!isBlocked) {
+                this.mesh.position.x = nextX;
+                this.mesh.position.z = nextZ;
+            }
 
+            // Rotate player
             const targetAngle = Math.atan2(this._tempMove.x, this._tempMove.z);
             this._targetRotation.setFromEuler(new THREE.Euler(0, targetAngle, 0, 'YXZ'));
             this.mesh.quaternion.slerp(this._targetRotation, this.rotationSpeed * delta);

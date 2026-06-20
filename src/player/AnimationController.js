@@ -56,9 +56,10 @@ export class AnimationController {
     update(delta, state) {
         this.mixer.update(delta);
         
+        // Strict priority: Jump > Sprint > Walk > Idle
         if (state.isJumping) {
             this.play('jump', 0.1);
-        } else if (state.isSprinting) {
+        } else if (state.isMoving && state.isSprinting) {
             this.play('run');
         } else if (state.isMoving) {
             this.play('walk');

@@ -56,7 +56,6 @@ export class Game {
         this.inputManager = new InputManager(this.container);
         this.mobileControls = new MobileControls(this.container);
 
-        // Generate World
         this.worldGenerator = new WorldGenerator(this.sceneManager.scene, this.assetManager);
         await this.worldGenerator.generate();
 
@@ -68,26 +67,21 @@ export class Game {
 
     async loadInitialAssets() {
         try {
-            // Load Player
             const playerGltf = await this.assetManager.loadGLTF('/assets/characters/UAL1_Standard_RM.glb', 'player');
             this.player = playerGltf.scene;
             AssetManager.setupShadows(this.player);
             this.sceneManager.add(this.player);
-
-            // Snap player to terrain
             this.player.position.y = this.worldGenerator.getHeightAt(0, 0);
 
             this.animationController = new AnimationController(this.player, playerGltf.animations);
             this.playerController = new PlayerController(this.sceneManager.scene, this.camera, this.player, this.worldGenerator);
 
-            // Load Companion
             const companionGltf = await this.assetManager.loadGLTF('/assets/characters/RobotExpressive (1).glb', 'companion');
             this.companion = companionGltf.scene;
             this.companion.scale.set(0.35, 0.35, 0.35);
             AssetManager.setupShadows(this.companion);
             this.sceneManager.add(this.companion);
 
-            // Initialize Systems
             this.cameraController = new CameraController(this.camera, this.container, this.player, this.worldGenerator);
             this.companionSystem = new CompanionSystem(this.companion, companionGltf.animations, this.player, this.worldGenerator);
 
@@ -127,11 +121,15 @@ export class Game {
     }
 
     update(delta) {
+        // FIX: Update Camera FIRST so PlayerController gets the correct forward vector
+        if (this.cameraController) {
+            this.cameraController.update(delta);
+        }
+
         if (this.playerController && this.inputManager) {
             const moveVector = this.inputManager.getMovementVector();
             const isSprinting = this.mobileControls.isPressed('sprint');
             
-            // Consume Jump Press
             if (this.mobileControls.consumePress('jump')) {
                 this.playerController.jump();
             }
@@ -145,10 +143,6 @@ export class Game {
                     isJumping: this.playerController.isJumping
                 });
             }
-        }
-
-        if (this.cameraController) {
-            this.cameraController.update(delta);
         }
 
         if (this.companionSystem) {
