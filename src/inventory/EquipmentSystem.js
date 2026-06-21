@@ -5,23 +5,33 @@ export class EquipmentSystem {
         this.player = playerMesh;
         this.assetManager = assetManager;
         this.rightHandBone = null;
-        this.currentTool = null; // 'axe', 'pickaxe', or null
+        this.currentTool = null;
 
         this._findHandBone();
     }
 
     _findHandBone() {
+        let bestMatch = null;
         this.player.traverse(object => {
-            if (object.isBone && object.name.toLowerCase().includes('hand')) {
-                if (object.name.toLowerCase().includes('right')) {
-                    this.rightHandBone = object;
-                    console.log("Found Right Hand Bone:", this.rightHandBone.name);
+            if (object.isBone) {
+                const name = object.name.toLowerCase();
+                // Look for hand bones
+                if (name.includes('hand')) {
+                    // Prioritize right hand, but accept any hand if right isn't found
+                    if (name.includes('right') || name.includes('r_hand')) {
+                        bestMatch = object;
+                    } else if (!bestMatch) {
+                        bestMatch = object;
+                    }
                 }
             }
         });
 
-        if (!this.rightHandBone) {
-            console.warn("Right hand bone not found! Attaching tool to player root instead.");
+        this.rightHandBone = bestMatch;
+        if (this.rightHandBone) {
+            console.log("Attached tool to bone:", this.rightHandBone.name);
+        } else {
+            console.warn("No hand bone found! Attaching to player root.");
             this.rightHandBone = this.player; // Fallback
         }
     }
@@ -30,7 +40,6 @@ export class EquipmentSystem {
         this.unequip();
 
         let path = '';
-        // FIX: Encode spaces in URL to prevent 404 errors
         if (toolName === 'axe') path = '/assets/tools/Axe%201.glb';
         else if (toolName === 'pickaxe') path = '/assets/tools/Pickaxe%201.glb';
         else return;
@@ -38,15 +47,17 @@ export class EquipmentSystem {
         try {
             const gltf = await this.assetManager.loadGLTF(path, toolName);
             this.currentTool = gltf.scene;
-            this.currentTool.name = toolName; // Explicitly set name for logic checks
+            this.currentTool.name = toolName;
             
             this.currentTool.scale.set(1, 1, 1);
-            this.currentTool.rotation.set(0, 0, 0);
             
-            if (this.rightHandBone) {
-                this.rightHandBone.add(this.currentTool);
-                this.currentTool.position.set(0, 0, 0);
-            }
+            // Attach to bone
+            this.rightHandBone.add(this.currentTool);
+            
+            // Apply manual offset and rotation so it sits correctly in the hand
+            // These values might need tweaking based on the exact mesh, but are good defaults
+            this.currentTool.position.set(0, 0.1, 0.1);
+            this.currentTool.rotation.set(Math.PI / 2, 0, Math.PI / 2); // Rotate so blade faces forward
         } catch (e) {
             console.error(`Failed to equip ${toolName}`, e);
         }
