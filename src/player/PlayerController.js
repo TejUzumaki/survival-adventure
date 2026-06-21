@@ -33,7 +33,8 @@ export class PlayerController {
 
     _handleGroundCheck() {
         const terrainHeight = this.worldGenerator.getHeightAt(this.mesh.position.x, this.mesh.position.z);
-        if (this.mesh.position.y <= terrainHeight + 0.05) {
+        // Increased threshold to ensure isGrounded is reliably true
+        if (this.mesh.position.y <= terrainHeight + 0.1) {
             this.mesh.position.y = terrainHeight;
             this.velocityY = 0;
             if (!this.isGrounded) this.isJumping = false;
@@ -66,11 +67,9 @@ export class PlayerController {
         if (this._tempMove.lengthSq() > 0) {
             this._tempMove.normalize();
             
-            // Calculate intended next position
             let nextX = this.mesh.position.x + this._tempMove.x * speed * delta;
             let nextZ = this.mesh.position.z + this._tempMove.z * speed * delta;
             
-            // Check Collisions
             let isBlocked = false;
             const playerRadius = 0.5;
             
@@ -86,13 +85,11 @@ export class PlayerController {
                 }
             }
             
-            // Apply movement if not blocked
             if (!isBlocked) {
                 this.mesh.position.x = nextX;
                 this.mesh.position.z = nextZ;
             }
 
-            // Rotate player
             const targetAngle = Math.atan2(this._tempMove.x, this._tempMove.z);
             this._targetRotation.setFromEuler(new THREE.Euler(0, targetAngle, 0, 'YXZ'));
             this.mesh.quaternion.slerp(this._targetRotation, this.rotationSpeed * delta);

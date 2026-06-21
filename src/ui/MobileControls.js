@@ -29,12 +29,12 @@ export class MobileControls {
             font-size: 12px;
             font-weight: bold;
             text-transform: uppercase;
-            z-index: 120; /* Increased z-index */
+            z-index: 120;
             pointer-events: auto;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
             backdrop-filter: blur(2px);
-            touch-action: none; /* CRITICAL: Prevent browser gestures */
+            touch-action: none;
         `;
         this.container.appendChild(btn);
         this.buttons[id] = { element: btn, active: false, isToggle: isToggle };
@@ -42,6 +42,11 @@ export class MobileControls {
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            
+            // Dispatch a global event for instantaneous actions like jump
+            if (id === 'jump') {
+                window.dispatchEvent(new Event('game_jump'));
+            }
             
             if (isToggle) {
                 this.buttons[id].active = !this.buttons[id].active;
@@ -71,10 +76,8 @@ export class MobileControls {
         btn.addEventListener('touchcancel', endHandler, { passive: false });
     }
 
-    isPressed(id) {
-        return this.buttons[id]?.active || false;
-    }
-
+    isPressed(id) { return this.buttons[id]?.active || false; }
+    
     consumePress(id) {
         if (this.buttons[id]?.active && !this.buttons[id]?.isToggle) {
             this.buttons[id].active = false;

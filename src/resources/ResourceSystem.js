@@ -1,59 +1,53 @@
 import * as THREE from 'three';
 
 export class ResourceSystem {
-    constructor(scene, playerMesh, worldGenerator) {
+    constructor(scene, playerMesh, worldGenerator, inventorySystem) {
         this.scene = scene;
         this.player = playerMesh;
         this.worldGenerator = worldGenerator;
+        this.inventorySystem = inventorySystem; // Injected to add items directly
         this.resources = [];
-        this.resourcesGained = { wood: 0, stone: 0 };
-
-        this.raycaster = new THREE.Raycaster();
     }
 
     registerResource(mesh, type) {
-        const health = 3;
         mesh.userData.resourceType = type;
-        mesh.userData.health = health;
-        mesh.userData.maxHealth = health;
+        mesh.userData.health = 3;
+        mesh.userData.maxHealth = 3;
         mesh.userData.isFalling = false;
         mesh.userData.originalRotation = mesh.rotation.clone();
-        
         this.resources.push(mesh);
     }
 
     harvest(equippedTool) {
-        const origin = this.player.position.clone();
-        origin.y += 1.0;
+        let closestResource = null;
+        let closestDist = 3.0; // 3 meter reach
         
-        const playerForward = new THREE.Vector3();
-        this.player.getWorldDirection(playerForward);
-        
-        this.raycaster.set(origin, playerForward);
-        this.raycaster.far = 3.0;
-
-        const intersects = this.raycaster.intersectObjects(this.resources, true);
-
-        if (intersects.length > 0) {
-            let hitObject = intersects[0].object;
-            while (hitObject.parent && !hitObject.userData.resourceType) {
-                hitObject = hitObject.parent;
+        // Find the closest resource to the player
+        for (const res of this.resources) {
+            if (res.userData.isFalling) continue;
+            
+            const dist = res.position.distanceTo(this.player.position);
+            if (dist < closestDist) {
+                closestDist = dist;
+                closestResource = res;
             }
+        }
 
-            if (hitObject.userData.resourceType) {
-                const type = hitObject.userData.resourceType;
-                
-                if (type === 'tree' && equippedTool !== 'axe') return false;
-                if (type === 'rock' && equippedTool !== 'pickaxe') return false;
+        if (closestResource) {
+            const type = closestResource.userData.resourceType;
+            
+            // Check tool
+            if (type === 'tree' && equippedTool !== 'axe') return false;
+            if (type === 'rock' && equippedTool !== 'pickaxe') return false;
 
-                hitObject.userData.health--;
-                this._shakeResource(hitObject);
+            // Apply damage
+            closestResource.userData.health--;
+            this._shakeResource(closestResource);
 
-                if (hitObject.userData.health <= 0) {
-                    this._fallResource(hitObject);
-                }
-                return true;
+            if (closestResource.userData.health <= 0) {
+                this._fallResource(closestResource);
             }
+            return true;
         }
         return false;
     }
@@ -87,14 +81,16 @@ export class ResourceSystem {
             if (res.userData.isFalling) {
                 res.userData.fallTime += delta;
                 
-                // Give resource immediately when it starts falling
                 if (!res.userData.resourceGiven) {
-                    if (res.userData.resourceType === 'tree') this.resourcesGained.wood += 3;
-                    else if (res.userData.resourceType === 'rock') this.resourcesGained.stone += 2;
+                    if (res.userData.resourceType === 'tree') {
+                        this.inventorySystem.addItem('wood', 3);
+                    } else if (res.userData.resourceType === 'rock') {
+                        this.inventorySystem.addItem('stone', 2);
+                    }
                     res.userData.resourceGiven = true;
                 }
                 
-                // Smooth fall and shrink effect
+                // Smooth fall and shrink
                 res.rotation.x += delta * 4.0;
                 const scale = Math.max(0, 1.0 - res.userData.fallTime);
                 res.scale.set(scale, scale, scale);

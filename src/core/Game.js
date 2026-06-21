@@ -8,9 +8,11 @@ import { CameraController } from '../camera/CameraController.js';
 import { CompanionSystem } from '../companion/CompanionSystem.js';
 import { MobileControls } from '../ui/MobileControls.js';
 import { HUD } from '../ui/HUD.js';
+import { InventoryUI } from '../ui/InventoryUI.js';
 import { WorldGenerator } from '../world/WorldGenerator.js';
 import { EquipmentSystem } from '../inventory/EquipmentSystem.js';
 import { ResourceSystem } from '../resources/ResourceSystem.js';
+import { InventorySystem } from '../inventory/InventorySystem.js';
 
 export class Game {
     constructor() {
@@ -29,9 +31,11 @@ export class Game {
         this.companionSystem = null;
         this.mobileControls = null;
         this.hud = null;
+        this.inventoryUI = null;
         this.worldGenerator = null;
         this.equipmentSystem = null;
         this.resourceSystem = null;
+        this.inventorySystem = null;
 
         this.clock = new THREE.Clock();
         this.isRunning = false;
@@ -61,14 +65,20 @@ export class Game {
         this.assetManager = new AssetManager();
         this.inputManager = new InputManager(this.container);
         this.mobileControls = new MobileControls(this.container);
+        
+        this.inventorySystem = new InventorySystem();
         this.hud = new HUD(this.container);
+        this.inventoryUI = new InventoryUI(this.container);
 
-        this.resourceSystem = new ResourceSystem(this.sceneManager.scene, null, null);
+        this.resourceSystem = new ResourceSystem(this.sceneManager.scene, null, null, this.inventorySystem);
 
         this.worldGenerator = new WorldGenerator(this.sceneManager.scene, this.assetManager, this.resourceSystem);
         await this.worldGenerator.generate();
 
         await this.loadInitialAssets();
+
+        // Listen for instantaneous jump event
+        window.addEventListener('game_jump', () => this.playerController.jump());
 
         window.addEventListener('resize', this.onResize);
         window.addEventListener('contextmenu', e => e.preventDefault());
@@ -139,10 +149,6 @@ export class Game {
             const moveVector = this.inputManager.getMovementVector();
             const isSprinting = this.mobileControls.isPressed('sprint');
             
-            if (this.mobileControls.consumePress('jump')) {
-                this.playerController.jump();
-            }
-
             if (this.mobileControls.consumePress('action')) {
                 const currentTool = this.equipmentSystem.getCurrentTool();
                 if (currentTool === null) this.equipmentSystem.equip('axe');
@@ -152,17 +158,18 @@ export class Game {
 
             if (this.mobileControls.consumePress('gather')) {
                 const equippedTool = this.equipmentSystem.getCurrentTool();
-                
-                // Trigger animation regardless of tool
                 this.animationController.triggerAttack();
                 
-                if (equippedTool) {
-                    // Delay harvest to match swing
-                    setTimeout(() => {
-                        this.resourceSystem.harvest(equippedTool);
-                        this.hud.update(this.resourceSystem.resourcesGained);
-                    }, 300);
-                }
+                // Delay harvest to match swing
+                setTimeout(() => {
+                    this.resourceSystem.harvest(equippedTool);
+                    this.hud.update(this.inventorySystem.getItems());
+                }, 300);
+            }
+
+            if (this.mobileControls.consumePress('inventory')) {
+                this.inventoryUI.toggle();
+                this.inventoryUI.update(this.inventorySystem.getItems());
             }
 
             this.playerController.update(delta, moveVector, isSprinting);

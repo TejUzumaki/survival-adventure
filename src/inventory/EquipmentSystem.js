@@ -15,24 +15,23 @@ export class EquipmentSystem {
         this.player.traverse(object => {
             if (object.isBone) {
                 const name = object.name.toLowerCase();
-                // Look for hand bones
-                if (name.includes('hand')) {
-                    // Prioritize right hand, but accept any hand if right isn't found
-                    if (name.includes('right') || name.includes('r_hand')) {
-                        bestMatch = object;
-                    } else if (!bestMatch) {
-                        bestMatch = object;
-                    }
+                const isHand = name.includes('hand');
+                const isRight = name.includes('right') || name.includes('r_hand') || name.includes('hand_r');
+                const isLeft = name.includes('left') || name.includes('l_hand') || name.includes('hand_l');
+                
+                // Strictly find the right hand
+                if (isHand && isRight && !isLeft) {
+                    bestMatch = object;
                 }
             }
         });
 
         this.rightHandBone = bestMatch;
         if (this.rightHandBone) {
-            console.log("Attached tool to bone:", this.rightHandBone.name);
+            console.log("Attached tool to Right Hand Bone:", this.rightHandBone.name);
         } else {
-            console.warn("No hand bone found! Attaching to player root.");
-            this.rightHandBone = this.player; // Fallback
+            console.warn("Right hand bone not found! Attaching to player root.");
+            this.rightHandBone = this.player;
         }
     }
 
@@ -50,14 +49,11 @@ export class EquipmentSystem {
             this.currentTool.name = toolName;
             
             this.currentTool.scale.set(1, 1, 1);
-            
-            // Attach to bone
             this.rightHandBone.add(this.currentTool);
             
-            // Apply manual offset and rotation so it sits correctly in the hand
-            // These values might need tweaking based on the exact mesh, but are good defaults
+            // Adjust offset and rotation to look correct
             this.currentTool.position.set(0, 0.1, 0.1);
-            this.currentTool.rotation.set(Math.PI / 2, 0, Math.PI / 2); // Rotate so blade faces forward
+            this.currentTool.rotation.set(Math.PI / 2, 0, Math.PI / 2);
         } catch (e) {
             console.error(`Failed to equip ${toolName}`, e);
         }
