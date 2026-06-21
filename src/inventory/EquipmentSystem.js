@@ -19,7 +19,6 @@ export class EquipmentSystem {
                 const isRight = name.includes('right') || name.includes('r_hand') || name.includes('hand_r');
                 const isLeft = name.includes('left') || name.includes('l_hand') || name.includes('hand_l');
                 
-                // Strictly find the right hand
                 if (isHand && isRight && !isLeft) {
                     bestMatch = object;
                 }
@@ -51,9 +50,10 @@ export class EquipmentSystem {
             this.currentTool.scale.set(1, 1, 1);
             this.rightHandBone.add(this.currentTool);
             
-            // Adjust offset and rotation to look correct
-            this.currentTool.position.set(0, 0.1, 0.1);
-            this.currentTool.rotation.set(Math.PI / 2, 0, Math.PI / 2);
+            // Adjust offset and rotation to look like it's held properly
+            this.currentTool.position.set(0, 0, 0.1);
+            // Rotate so the handle is in the hand and blade points up/forward
+            this.currentTool.rotation.set(0, Math.PI / 2, Math.PI / 4); 
         } catch (e) {
             console.error(`Failed to equip ${toolName}`, e);
         }

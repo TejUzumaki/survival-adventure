@@ -5,7 +5,7 @@ export class ResourceSystem {
         this.scene = scene;
         this.player = playerMesh;
         this.worldGenerator = worldGenerator;
-        this.inventorySystem = inventorySystem; // Injected to add items directly
+        this.inventorySystem = inventorySystem;
         this.resources = [];
     }
 
@@ -20,9 +20,8 @@ export class ResourceSystem {
 
     harvest(equippedTool) {
         let closestResource = null;
-        let closestDist = 3.0; // 3 meter reach
+        let closestDist = 4.5; // Increased reach to ensure it hits over collision radius
         
-        // Find the closest resource to the player
         for (const res of this.resources) {
             if (res.userData.isFalling) continue;
             
@@ -36,11 +35,9 @@ export class ResourceSystem {
         if (closestResource) {
             const type = closestResource.userData.resourceType;
             
-            // Check tool
             if (type === 'tree' && equippedTool !== 'axe') return false;
             if (type === 'rock' && equippedTool !== 'pickaxe') return false;
 
-            // Apply damage
             closestResource.userData.health--;
             this._shakeResource(closestResource);
 
@@ -90,7 +87,6 @@ export class ResourceSystem {
                     res.userData.resourceGiven = true;
                 }
                 
-                // Smooth fall and shrink
                 res.rotation.x += delta * 4.0;
                 const scale = Math.max(0, 1.0 - res.userData.fallTime);
                 res.scale.set(scale, scale, scale);

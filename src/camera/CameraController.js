@@ -7,10 +7,10 @@ export class CameraController {
         this.target = target;
         this.worldGenerator = worldGenerator;
 
-        this.minDistance = 3;
-        this.maxDistance = 15;
-        this.currentDistance = 8;
-        this.targetDistance = 8;
+        this.minDistance = 2.5;
+        this.maxDistance = 12;
+        this.currentDistance = 5.5; // Closer to player
+        this.targetDistance = 5.5;  // Closer to player
         
         this.minPolarAngle = 0.1;
         this.maxPolarAngle = Math.PI / 2 - 0.1;
@@ -58,8 +58,6 @@ export class CameraController {
 
     onTouchStart(e) {
         e.preventDefault();
-        
-        // If already dragging or pinching, ignore new touches for those actions
         if (this.isDragging || this.pinchTouchIds.length === 2) return;
 
         if (e.changedTouches.length === 1 && this.pinchTouchIds.length === 0) {
@@ -68,7 +66,6 @@ export class CameraController {
             this.dragTouchId = touch.identifier;
             this.previousTouch = { x: touch.clientX, y: touch.clientY };
         } else if (e.changedTouches.length >= 1 && this.pinchTouchIds.length < 2) {
-            // Start gathering touches for pinch
             for(let i = 0; i < e.changedTouches.length; i++) {
                 if (this.pinchTouchIds.length < 2) {
                     this.pinchTouchIds.push(e.changedTouches[i].identifier);
@@ -76,10 +73,9 @@ export class CameraController {
             }
             
             if (this.pinchTouchIds.length === 2) {
-                this.isDragging = false; // Stop dragging if we start pinching
+                this.isDragging = false; 
                 this.dragTouchId = null;
                 
-                // Find the two touches for pinch
                 let t1 = null, t2 = null;
                 for(let i = 0; i < e.touches.length; i++) {
                     if (e.touches[i].identifier === this.pinchTouchIds[0]) t1 = e.touches[i];
@@ -99,7 +95,6 @@ export class CameraController {
         e.preventDefault();
         
         if (this.isDragging && this.dragTouchId !== null) {
-            // Find the specific touch that is dragging
             let touch = null;
             for (let i = 0; i < e.touches.length; i++) {
                 if (e.touches[i].identifier === this.dragTouchId) {

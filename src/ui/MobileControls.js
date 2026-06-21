@@ -3,11 +3,12 @@ export class MobileControls {
         this.container = container;
         this.buttons = {};
         
-        this.createButton('jump', 'JUMP', 'bottom: 20px; right: 100px;');
-        this.createButton('action', 'ACT', 'bottom: 80px; right: 160px;');
-        this.createButton('gather', 'GATH', 'bottom: 160px; right: 160px;');
-        this.createButton('sprint', 'SPRINT', 'bottom: 220px; right: 100px;', true);
-        this.createButton('inventory', 'INV', 'top: 20px; right: 20px;');
+        // Tighter vertical arc layout
+        this.createButton('jump', 'JUMP', 'bottom: 15px; right: 80px;');
+        this.createButton('action', 'ACT', 'bottom: 85px; right: 130px;');
+        this.createButton('gather', 'GATH', 'bottom: 155px; right: 130px;');
+        this.createButton('sprint', 'SPRINT', 'bottom: 225px; right: 80px;', true);
+        this.createButton('inventory', 'INV', 'top: 15px; right: 15px;');
     }
 
     createButton(id, label, positionCss, isToggle = false) {
@@ -17,8 +18,8 @@ export class MobileControls {
         btn.style.cssText = `
             position: absolute;
             ${positionCss}
-            width: 70px;
-            height: 70px;
+            width: 65px;
+            height: 65px;
             border-radius: 50%;
             background: rgba(0, 0, 0, 0.4);
             border: 2px solid rgba(255, 255, 255, 0.6);
@@ -26,7 +27,7 @@ export class MobileControls {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
             text-transform: uppercase;
             z-index: 120;
@@ -43,7 +44,6 @@ export class MobileControls {
             e.preventDefault();
             e.stopPropagation();
             
-            // Dispatch a global event for instantaneous actions like jump
             if (id === 'jump') {
                 window.dispatchEvent(new Event('game_jump'));
             }

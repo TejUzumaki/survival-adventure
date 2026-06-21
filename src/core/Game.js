@@ -77,7 +77,6 @@ export class Game {
 
         await this.loadInitialAssets();
 
-        // Listen for instantaneous jump event
         window.addEventListener('game_jump', () => this.playerController.jump());
 
         window.addEventListener('resize', this.onResize);
@@ -100,7 +99,7 @@ export class Game {
 
             const companionGltf = await this.assetManager.loadGLTF('/assets/characters/RobotExpressive (1).glb', 'companion');
             this.companion = companionGltf.scene;
-            this.companion.scale.set(0.35, 0.35, 0.35);
+            this.companion.scale.set(0.15, 0.15, 0.15); // Drastically smaller robot
             AssetManager.setupShadows(this.companion);
             this.sceneManager.add(this.companion);
 
@@ -160,16 +159,13 @@ export class Game {
                 const equippedTool = this.equipmentSystem.getCurrentTool();
                 this.animationController.triggerAttack();
                 
-                // Delay harvest to match swing
                 setTimeout(() => {
                     this.resourceSystem.harvest(equippedTool);
-                    this.hud.update(this.inventorySystem.getItems());
                 }, 300);
             }
 
             if (this.mobileControls.consumePress('inventory')) {
                 this.inventoryUI.toggle();
-                this.inventoryUI.update(this.inventorySystem.getItems());
             }
 
             this.playerController.update(delta, moveVector, isSprinting);
@@ -185,6 +181,12 @@ export class Game {
 
         if (this.companionSystem) this.companionSystem.update(delta);
         if (this.resourceSystem) this.resourceSystem.update(delta);
+        
+        // Constantly update HUD and Inventory so counts appear instantly when tree falls
+        this.hud.update(this.inventorySystem.getItems());
+        if (this.inventoryUI.isOpen) {
+            this.inventoryUI.update(this.inventorySystem.getItems());
+        }
     }
 
     render() {
