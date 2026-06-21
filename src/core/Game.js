@@ -45,7 +45,6 @@ export class Game {
         this.timeStep = 1 / 60;
         this.maxSubSteps = 5;
 
-        // FPS Tracking
         this.fps = 60;
         this.frames = 0;
         this.prevTime = performance.now();
@@ -92,6 +91,12 @@ export class Game {
         window.addEventListener('game_jump', () => this.playerController.jump());
         window.addEventListener('resize', this.onResize);
         window.addEventListener('contextmenu', e => e.preventDefault());
+        
+        // Listen for inventory swaps
+        window.addEventListener('inventory_swap', (e) => {
+            this.inventorySystem.swapItems(e.detail.a, e.detail.b);
+            this.inventoryUI.update(this.inventorySystem.getItems());
+        });
     }
 
     async loadInitialAssets() {
@@ -153,7 +158,6 @@ export class Game {
     }
 
     update(delta) {
-        // FPS Tracking & Auto-Optimize
         this.frames++;
         const now = performance.now();
         if (now >= this.prevTime + 1000) {
@@ -161,7 +165,6 @@ export class Game {
             this.prevTime = now;
             this.frames = 0;
             
-            // Auto downscale resolution if FPS is consistently low
             if (this.fps < 30) {
                 this.lowFpsTimer += 1;
                 if (this.lowFpsTimer >= 2 && this.renderer.getPixelRatio() > 1) {
@@ -203,9 +206,11 @@ export class Game {
             this.playerController.update(delta, moveVector, isSprinting);
 
             if (this.animationController) {
+                // Pass actual sprint state to animations to prevent stutter
+                const actualSprint = isSprinting && this.playerController.stamina > 0 && !this.playerController.isExhausted;
                 this.animationController.update(delta, {
                     isMoving: this.inputManager.isMoving(),
-                    isSprinting: isSprinting && this.playerController.stamina > 0,
+                    isSprinting: actualSprint,
                     isJumping: this.playerController.isJumping
                 });
             }

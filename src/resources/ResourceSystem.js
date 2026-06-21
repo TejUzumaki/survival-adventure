@@ -20,31 +20,16 @@ export class ResourceSystem {
     }
 
     harvest(equippedTool) {
-        const playerPos = this.player.position.clone();
-        playerPos.y += 1.0; // Chest height
-        
-        const playerForward = new THREE.Vector3();
-        this.player.getWorldDirection(playerForward);
-        playerForward.y = 0; // Flatten to horizontal plane
-        playerForward.normalize();
-
         let closestResource = null;
-        let closestDist = 4.5; // 4.5 meter reach
+        let closestDist = 4.0; // 4 meter reach
         
         for (const res of this.resources) {
             if (res.userData.isFalling) continue;
             
             const dist = res.position.distanceTo(this.player.position);
             if (dist < closestDist) {
-                // Check if player is roughly looking at it
-                const dirToRes = new THREE.Vector3().subVectors(res.position, playerPos).normalize();
-                dirToRes.y = 0;
-                
-                const dot = dirToRes.dot(playerForward);
-                if (dot > 0.3) { // 0.3 means within ~70 degrees of forward view
-                    closestDist = dist;
-                    closestResource = res;
-                }
+                closestDist = dist;
+                closestResource = res;
             }
         }
 

@@ -16,42 +16,32 @@ export class MobileControls {
         btn.id = `btn-${id}`;
         btn.innerText = label;
         
-        // Load saved position from localStorage if it exists
         const savedPos = localStorage.getItem(`ui_pos_${id}`);
         const positionCss = savedPos ? JSON.parse(savedPos) : null;
 
         btn.style.cssText = `
             position: absolute;
             ${positionCss ? `left: ${positionCss.x}px; top: ${positionCss.y}px;` : defaultPositionCss}
-            width: 55px;
-            height: 55px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.5);
-            border: 2px solid rgba(255, 255, 255, 0.7);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: bold;
-            text-transform: uppercase;
-            z-index: 150;
-            pointer-events: auto;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            backdrop-filter: blur(2px);
+            width: 55px; height: 55px; border-radius: 50%;
+            background: rgba(0, 0, 0, 0.5); border: 2px solid rgba(255, 255, 255, 0.7);
+            color: white; display: flex; align-items: center; justify-content: center;
+            font-size: 10px; font-weight: bold; text-transform: uppercase;
+            z-index: 150; pointer-events: auto; user-select: none;
+            -webkit-tap-highlight-color: transparent; backdrop-filter: blur(2px);
             touch-action: none;
-            transition: background 0.2s, color 0.2s, border-color 0.2s;
         `;
         this.container.appendChild(btn);
         this.buttons[id] = { element: btn, active: false, isToggle: isToggle };
 
         let pressTimer = null;
         let isDragging = false;
+        let pointerId = null;
 
         btn.addEventListener('pointerdown', (e) => {
             e.preventDefault();
             e.stopPropagation();
+            pointerId = e.pointerId;
+            btn.setPointerCapture(pointerId); // Capture pointer so pointerleave doesn't break it
             
             // Start 3-second timer to enter drag mode
             pressTimer = setTimeout(() => {
@@ -77,14 +67,15 @@ export class MobileControls {
             e.preventDefault();
             e.stopPropagation();
             clearTimeout(pressTimer);
+            
+            try { btn.releasePointerCapture(pointerId); } catch(err) {}
 
             if (isDragging) {
-                // Save new position to localStorage
                 isDragging = false;
                 btn.style.borderColor = 'rgba(255, 255, 255, 0.7)';
                 const rect = btn.getBoundingClientRect();
                 localStorage.setItem(`ui_pos_${id}`, JSON.stringify({ x: rect.left, y: rect.top }));
-                return; // Don't trigger button action if we were dragging
+                return; // Do not toggle if we were dragging
             }
 
             // Normal Tap Logic
@@ -104,17 +95,16 @@ export class MobileControls {
                 this.buttons[id].active = true;
                 btn.style.background = 'rgba(255, 255, 255, 0.8)';
                 btn.style.color = 'black';
-                
-                // Auto reset visual for non-toggle
                 setTimeout(() => {
-                    btn.style.background = 'rgba(0, 0, 0, 0.5)';
-                    btn.style.color = 'white';
+                    if (!this.buttons[id].active) {
+                        btn.style.background = 'rgba(0, 0, 0, 0.5)';
+                        btn.style.color = 'white';
+                    }
                 }, 100);
             }
         };
         
         btn.addEventListener('pointerup', endHandler);
-        btn.addEventListener('pointerleave', endHandler);
         btn.addEventListener('pointercancel', endHandler);
     }
 
