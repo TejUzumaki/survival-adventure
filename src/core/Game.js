@@ -7,7 +7,10 @@ import { AnimationController } from '../player/AnimationController.js';
 import { CameraController } from '../camera/CameraController.js';
 import { CompanionSystem } from '../companion/CompanionSystem.js';
 import { MobileControls } from '../ui/MobileControls.js';
+import { HUD } from '../ui/HUD.js';
 import { WorldGenerator } from '../world/WorldGenerator.js';
+import { EquipmentSystem } from '../inventory/EquipmentSystem.js';
+import { ResourceSystem } from '../resources/ResourceSystem.js';
 
 export class Game {
     constructor() {
@@ -25,7 +28,10 @@ export class Game {
         this.cameraController = null;
         this.companionSystem = null;
         this.mobileControls = null;
+        this.hud = null;
         this.worldGenerator = null;
+        this.equipmentSystem = null;
+        this.resourceSystem = null;
 
         this.clock = new THREE.Clock();
         this.isRunning = false;
@@ -55,8 +61,11 @@ export class Game {
         this.assetManager = new AssetManager();
         this.inputManager = new InputManager(this.container);
         this.mobileControls = new MobileControls(this.container);
+        this.hud = new HUD(this.container);
 
-        this.worldGenerator = new WorldGenerator(this.sceneManager.scene, this.assetManager);
+        this.resourceSystem = new ResourceSystem(this.sceneManager.scene, null, null);
+
+        this.worldGenerator = new WorldGenerator(this.sceneManager.scene, this.assetManager, this.resourceSystem);
         await this.worldGenerator.generate();
 
         await this.loadInitialAssets();
@@ -75,6 +84,9 @@ export class Game {
 
             this.animationController = new AnimationController(this.player, playerGltf.animations);
             this.playerController = new PlayerController(this.sceneManager.scene, this.camera, this.player, this.worldGenerator);
+            this.equipmentSystem = new EquipmentSystem(this.player, this.assetManager);
+            
+            this.resourceSystem.player = this.player;
 
             const companionGltf = await this.assetManager.loadGLTF('/assets/characters/RobotExpressive (1).glb', 'companion');
             this.companion = companionGltf.scene;
@@ -121,10 +133,7 @@ export class Game {
     }
 
     update(delta) {
-        // FIX: Update Camera FIRST so PlayerController gets the correct forward vector
-        if (this.cameraController) {
-            this.cameraController.update(delta);
-        }
+        if (this.cameraController) this.cameraController.update(delta);
 
         if (this.playerController && this.inputManager) {
             const moveVector = this.inputManager.getMovementVector();
@@ -132,6 +141,28 @@ export class Game {
             
             if (this.mobileControls.consumePress('jump')) {
                 this.playerController.jump();
+            }
+
+            if (this.mobileControls.consumePress('action')) {
+                const currentTool = this.equipmentSystem.getCurrentTool();
+                if (currentTool === null) this.equipmentSystem.equip('axe');
+                else if (currentTool === 'axe') this.equipmentSystem.equip('pickaxe');
+                else if (currentTool === 'pickaxe') this.equipmentSystem.unequip();
+            }
+
+            if (this.mobileControls.consumePress('gather')) {
+                const equippedTool = this.equipmentSystem.getCurrentTool();
+                
+                // Trigger animation regardless of tool
+                this.animationController.triggerAttack();
+                
+                if (equippedTool) {
+                    // Delay harvest to match swing
+                    setTimeout(() => {
+                        this.resourceSystem.harvest(equippedTool);
+                        this.hud.update(this.resourceSystem.resourcesGained);
+                    }, 300);
+                }
             }
 
             this.playerController.update(delta, moveVector, isSprinting);
@@ -145,9 +176,8 @@ export class Game {
             }
         }
 
-        if (this.companionSystem) {
-            this.companionSystem.update(delta);
-        }
+        if (this.companionSystem) this.companionSystem.update(delta);
+        if (this.resourceSystem) this.resourceSystem.update(delta);
     }
 
     render() {

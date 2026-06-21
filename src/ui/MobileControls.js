@@ -3,11 +3,10 @@ export class MobileControls {
         this.container = container;
         this.buttons = {};
         
-        // Semi-circle layout on bottom right
         this.createButton('jump', 'JUMP', 'bottom: 20px; right: 100px;');
         this.createButton('action', 'ACT', 'bottom: 80px; right: 160px;');
         this.createButton('gather', 'GATH', 'bottom: 160px; right: 160px;');
-        this.createButton('sprint', 'SPRINT', 'bottom: 220px; right: 100px;', true); // Toggle button
+        this.createButton('sprint', 'SPRINT', 'bottom: 220px; right: 100px;', true);
         this.createButton('inventory', 'INV', 'top: 20px; right: 20px;');
     }
 
@@ -30,11 +29,12 @@ export class MobileControls {
             font-size: 12px;
             font-weight: bold;
             text-transform: uppercase;
-            z-index: 110;
+            z-index: 120; /* Increased z-index */
             pointer-events: auto;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
             backdrop-filter: blur(2px);
+            touch-action: none; /* CRITICAL: Prevent browser gestures */
         `;
         this.container.appendChild(btn);
         this.buttons[id] = { element: btn, active: false, isToggle: isToggle };
@@ -53,8 +53,9 @@ export class MobileControls {
                     btn.style.color = 'white';
                 }
             } else {
-                // For non-toggle buttons, we just trigger a flag that lasts one frame
                 this.buttons[id].active = true;
+                btn.style.background = 'rgba(255, 255, 255, 0.7)';
+                btn.style.color = 'black';
             }
         }, { passive: false });
 
@@ -62,7 +63,8 @@ export class MobileControls {
             e.preventDefault();
             e.stopPropagation();
             if (!isToggle) {
-                this.buttons[id].active = false;
+                btn.style.background = 'rgba(0, 0, 0, 0.4)';
+                btn.style.color = 'white';
             }
         };
         btn.addEventListener('touchend', endHandler, { passive: false });
@@ -74,7 +76,7 @@ export class MobileControls {
     }
 
     consumePress(id) {
-        if (this.buttons[id]?.active) {
+        if (this.buttons[id]?.active && !this.buttons[id]?.isToggle) {
             this.buttons[id].active = false;
             return true;
         }
