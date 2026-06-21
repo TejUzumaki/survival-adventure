@@ -50,9 +50,8 @@ export class EquipmentSystem {
             this.currentTool.scale.set(1, 1, 1);
             this.rightHandBone.add(this.currentTool);
             
-            // Adjust offset and rotation to look like it's held properly
-            this.currentTool.position.set(0, 0, 0.1);
-            // Rotate so the handle is in the hand and blade points up/forward
+            // Pushed handle deeper into palm (-0.1 on Y axis moves it into the hand)
+            this.currentTool.position.set(0, -0.1, 0.1);
             this.currentTool.rotation.set(0, Math.PI / 2, Math.PI / 4); 
         } catch (e) {
             console.error(`Failed to equip ${toolName}`, e);

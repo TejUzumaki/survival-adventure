@@ -29,11 +29,16 @@ export class PlayerController {
         this._handleGroundCheck();
         this._handleGravity(delta);
         this._handleMovement(delta, inputVector, isSprinting);
+        
+        // Anti-Glitch: If player falls below the world, teleport them back up
+        if (this.mesh.position.y < -10) {
+            this.mesh.position.set(0, 20, 0);
+            this.velocityY = 0;
+        }
     }
 
     _handleGroundCheck() {
         const terrainHeight = this.worldGenerator.getHeightAt(this.mesh.position.x, this.mesh.position.z);
-        // Increased threshold to ensure isGrounded is reliably true
         if (this.mesh.position.y <= terrainHeight + 0.1) {
             this.mesh.position.y = terrainHeight;
             this.velocityY = 0;

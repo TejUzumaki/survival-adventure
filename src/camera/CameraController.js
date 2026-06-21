@@ -7,16 +7,16 @@ export class CameraController {
         this.target = target;
         this.worldGenerator = worldGenerator;
 
-        this.minDistance = 2.5;
-        this.maxDistance = 12;
-        this.currentDistance = 5.5; // Closer to player
-        this.targetDistance = 5.5;  // Closer to player
+        this.minDistance = 2.0;
+        this.maxDistance = 10.0;
+        this.currentDistance = 3.5; // Very close over-the-shoulder
+        this.targetDistance = 3.5;
         
         this.minPolarAngle = 0.1;
         this.maxPolarAngle = Math.PI / 2 - 0.1;
         
         this.rotationSpeed = 0.005;
-        this.smoothFactor = 0.1;
+        this.smoothFactor = 0.12;
 
         this.spherical = new THREE.Spherical();
         this.sphericalDelta = new THREE.Spherical();

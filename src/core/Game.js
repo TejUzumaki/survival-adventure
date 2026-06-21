@@ -13,6 +13,7 @@ import { WorldGenerator } from '../world/WorldGenerator.js';
 import { EquipmentSystem } from '../inventory/EquipmentSystem.js';
 import { ResourceSystem } from '../resources/ResourceSystem.js';
 import { InventorySystem } from '../inventory/InventorySystem.js';
+import { AudioManager } from '../audio/AudioManager.js';
 
 export class Game {
     constructor() {
@@ -36,6 +37,7 @@ export class Game {
         this.equipmentSystem = null;
         this.resourceSystem = null;
         this.inventorySystem = null;
+        this.audioManager = null;
 
         this.clock = new THREE.Clock();
         this.isRunning = false;
@@ -64,13 +66,17 @@ export class Game {
         this.sceneManager = new SceneManager();
         this.assetManager = new AssetManager();
         this.inputManager = new InputManager(this.container);
-        this.mobileControls = new MobileControls(this.container);
+        
+        this.audioManager = new AudioManager();
+        this.audioManager.init();
+
+        this.mobileControls = new MobileControls(this.container, this.audioManager);
         
         this.inventorySystem = new InventorySystem();
         this.hud = new HUD(this.container);
         this.inventoryUI = new InventoryUI(this.container);
 
-        this.resourceSystem = new ResourceSystem(this.sceneManager.scene, null, null, this.inventorySystem);
+        this.resourceSystem = new ResourceSystem(this.sceneManager.scene, null, null, this.inventorySystem, this.audioManager);
 
         this.worldGenerator = new WorldGenerator(this.sceneManager.scene, this.assetManager, this.resourceSystem);
         await this.worldGenerator.generate();
@@ -99,7 +105,7 @@ export class Game {
 
             const companionGltf = await this.assetManager.loadGLTF('/assets/characters/RobotExpressive (1).glb', 'companion');
             this.companion = companionGltf.scene;
-            this.companion.scale.set(0.15, 0.15, 0.15); // Drastically smaller robot
+            this.companion.scale.set(0.15, 0.15, 0.15); // Very small robot
             AssetManager.setupShadows(this.companion);
             this.sceneManager.add(this.companion);
 
@@ -182,7 +188,6 @@ export class Game {
         if (this.companionSystem) this.companionSystem.update(delta);
         if (this.resourceSystem) this.resourceSystem.update(delta);
         
-        // Constantly update HUD and Inventory so counts appear instantly when tree falls
         this.hud.update(this.inventorySystem.getItems());
         if (this.inventoryUI.isOpen) {
             this.inventoryUI.update(this.inventorySystem.getItems());

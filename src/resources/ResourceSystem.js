@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 
 export class ResourceSystem {
-    constructor(scene, playerMesh, worldGenerator, inventorySystem) {
+    constructor(scene, playerMesh, worldGenerator, inventorySystem, audioManager) {
         this.scene = scene;
         this.player = playerMesh;
         this.worldGenerator = worldGenerator;
         this.inventorySystem = inventorySystem;
+        this.audioManager = audioManager;
         this.resources = [];
+        this.raycaster = new THREE.Raycaster();
     }
 
     registerResource(mesh, type) {
@@ -19,32 +21,40 @@ export class ResourceSystem {
     }
 
     harvest(equippedTool) {
-        let closestResource = null;
-        let closestDist = 4.5; // Increased reach to ensure it hits over collision radius
+        const origin = this.player.position.clone();
+        origin.y += 1.0; // Chest height
         
-        for (const res of this.resources) {
-            if (res.userData.isFalling) continue;
-            
-            const dist = res.position.distanceTo(this.player.position);
-            if (dist < closestDist) {
-                closestDist = dist;
-                closestResource = res;
+        const playerForward = new THREE.Vector3();
+        this.player.getWorldDirection(playerForward);
+        
+        this.raycaster.set(origin, playerForward);
+        this.raycaster.far = 3.5; // Reach distance
+
+        const intersects = this.raycaster.intersectObjects(this.resources, true);
+
+        if (intersects.length > 0) {
+            let hitObject = intersects[0].object;
+            while (hitObject.parent && !hitObject.userData.resourceType) {
+                hitObject = hitObject.parent;
             }
-        }
 
-        if (closestResource) {
-            const type = closestResource.userData.resourceType;
-            
-            if (type === 'tree' && equippedTool !== 'axe') return false;
-            if (type === 'rock' && equippedTool !== 'pickaxe') return false;
+            if (hitObject.userData.resourceType) {
+                const type = hitObject.userData.resourceType;
+                
+                if (type === 'tree' && equippedTool !== 'axe') return false;
+                if (type === 'rock' && equippedTool !== 'pickaxe') return false;
 
-            closestResource.userData.health--;
-            this._shakeResource(closestResource);
+                hitObject.userData.health--;
+                this._shakeResource(hitObject);
+                this.audioManager.playSound('chop');
 
-            if (closestResource.userData.health <= 0) {
-                this._fallResource(closestResource);
+                if (hitObject.userData.health <= 0) {
+                    this._fallResource(hitObject);
+                }
+                return true;
             }
-            return true;
+        } else {
+            console.log("Raycast missed. No resource in front of player.");
         }
         return false;
     }
