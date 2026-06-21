@@ -16,6 +16,12 @@ export class PlayerController {
         this.velocityY = 0;
         this.isJumping = false;
 
+        // Stamina
+        this.maxStamina = 100;
+        this.stamina = 100;
+        this.staminaDrain = 25; // per second
+        this.staminaRegen = 15; // per second
+
         this.raycaster = new THREE.Raycaster();
         this.downVector = new THREE.Vector3(0, -1, 0);
         
@@ -28,9 +34,23 @@ export class PlayerController {
     update(delta, inputVector, isSprinting) {
         this._handleGroundCheck();
         this._handleGravity(delta);
-        this._handleMovement(delta, inputVector, isSprinting);
         
-        // Anti-Glitch: If player falls below the world, teleport them back up
+        // Stamina Logic
+        const isMoving = inputVector.x !== 0 || inputVector.y !== 0;
+        if (isSprinting && isMoving && this.stamina > 0) {
+            this.stamina -= this.staminaDrain * delta;
+            if (this.stamina < 0) this.stamina = 0;
+        } else {
+            this.stamina += this.staminaRegen * delta;
+            if (this.stamina > this.maxStamina) this.stamina = this.maxStamina;
+        }
+
+        // Actual sprint state depends on stamina
+        const actualSprint = isSprinting && this.stamina > 0;
+
+        this._handleMovement(delta, inputVector, actualSprint);
+        
+        // Anti-Glitch
         if (this.mesh.position.y < -10) {
             this.mesh.position.set(0, 20, 0);
             this.velocityY = 0;

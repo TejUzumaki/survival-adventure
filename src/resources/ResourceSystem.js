@@ -8,7 +8,6 @@ export class ResourceSystem {
         this.inventorySystem = inventorySystem;
         this.audioManager = audioManager;
         this.resources = [];
-        this.raycaster = new THREE.Raycaster();
     }
 
     registerResource(mesh, type) {
@@ -21,40 +20,48 @@ export class ResourceSystem {
     }
 
     harvest(equippedTool) {
-        const origin = this.player.position.clone();
-        origin.y += 1.0; // Chest height
+        const playerPos = this.player.position.clone();
+        playerPos.y += 1.0; // Chest height
         
         const playerForward = new THREE.Vector3();
         this.player.getWorldDirection(playerForward);
+        playerForward.y = 0; // Flatten to horizontal plane
+        playerForward.normalize();
+
+        let closestResource = null;
+        let closestDist = 4.5; // 4.5 meter reach
         
-        this.raycaster.set(origin, playerForward);
-        this.raycaster.far = 3.5; // Reach distance
-
-        const intersects = this.raycaster.intersectObjects(this.resources, true);
-
-        if (intersects.length > 0) {
-            let hitObject = intersects[0].object;
-            while (hitObject.parent && !hitObject.userData.resourceType) {
-                hitObject = hitObject.parent;
-            }
-
-            if (hitObject.userData.resourceType) {
-                const type = hitObject.userData.resourceType;
+        for (const res of this.resources) {
+            if (res.userData.isFalling) continue;
+            
+            const dist = res.position.distanceTo(this.player.position);
+            if (dist < closestDist) {
+                // Check if player is roughly looking at it
+                const dirToRes = new THREE.Vector3().subVectors(res.position, playerPos).normalize();
+                dirToRes.y = 0;
                 
-                if (type === 'tree' && equippedTool !== 'axe') return false;
-                if (type === 'rock' && equippedTool !== 'pickaxe') return false;
-
-                hitObject.userData.health--;
-                this._shakeResource(hitObject);
-                this.audioManager.playSound('chop');
-
-                if (hitObject.userData.health <= 0) {
-                    this._fallResource(hitObject);
+                const dot = dirToRes.dot(playerForward);
+                if (dot > 0.3) { // 0.3 means within ~70 degrees of forward view
+                    closestDist = dist;
+                    closestResource = res;
                 }
-                return true;
             }
-        } else {
-            console.log("Raycast missed. No resource in front of player.");
+        }
+
+        if (closestResource) {
+            const type = closestResource.userData.resourceType;
+            
+            if (type === 'tree' && equippedTool !== 'axe') return false;
+            if (type === 'rock' && equippedTool !== 'pickaxe') return false;
+
+            closestResource.userData.health--;
+            this._shakeResource(closestResource);
+            this.audioManager.playSound('chop');
+
+            if (closestResource.userData.health <= 0) {
+                this._fallResource(closestResource);
+            }
+            return true;
         }
         return false;
     }

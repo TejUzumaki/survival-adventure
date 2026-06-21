@@ -45,6 +45,12 @@ export class Game {
         this.timeStep = 1 / 60;
         this.maxSubSteps = 5;
 
+        // FPS Tracking
+        this.fps = 60;
+        this.frames = 0;
+        this.prevTime = performance.now();
+        this.lowFpsTimer = 0;
+
         this.animate = this.animate.bind(this);
         this.onResize = this.onResize.bind(this);
     }
@@ -84,7 +90,6 @@ export class Game {
         await this.loadInitialAssets();
 
         window.addEventListener('game_jump', () => this.playerController.jump());
-
         window.addEventListener('resize', this.onResize);
         window.addEventListener('contextmenu', e => e.preventDefault());
     }
@@ -105,7 +110,7 @@ export class Game {
 
             const companionGltf = await this.assetManager.loadGLTF('/assets/characters/RobotExpressive (1).glb', 'companion');
             this.companion = companionGltf.scene;
-            this.companion.scale.set(0.15, 0.15, 0.15); // Very small robot
+            this.companion.scale.set(0.15, 0.15, 0.15);
             AssetManager.setupShadows(this.companion);
             this.sceneManager.add(this.companion);
 
@@ -148,6 +153,27 @@ export class Game {
     }
 
     update(delta) {
+        // FPS Tracking & Auto-Optimize
+        this.frames++;
+        const now = performance.now();
+        if (now >= this.prevTime + 1000) {
+            this.fps = Math.round((this.frames * 1000) / (now - this.prevTime));
+            this.prevTime = now;
+            this.frames = 0;
+            
+            // Auto downscale resolution if FPS is consistently low
+            if (this.fps < 30) {
+                this.lowFpsTimer += 1;
+                if (this.lowFpsTimer >= 2 && this.renderer.getPixelRatio() > 1) {
+                    console.warn("Low FPS detected. Lowering pixel ratio.");
+                    this.renderer.setPixelRatio(1);
+                    this.lowFpsTimer = 0;
+                }
+            } else {
+                this.lowFpsTimer = 0;
+            }
+        }
+
         if (this.cameraController) this.cameraController.update(delta);
 
         if (this.playerController && this.inputManager) {
@@ -179,7 +205,7 @@ export class Game {
             if (this.animationController) {
                 this.animationController.update(delta, {
                     isMoving: this.inputManager.isMoving(),
-                    isSprinting: isSprinting,
+                    isSprinting: isSprinting && this.playerController.stamina > 0,
                     isJumping: this.playerController.isJumping
                 });
             }
@@ -188,7 +214,7 @@ export class Game {
         if (this.companionSystem) this.companionSystem.update(delta);
         if (this.resourceSystem) this.resourceSystem.update(delta);
         
-        this.hud.update(this.inventorySystem.getItems());
+        this.hud.update(this.inventorySystem.getItems(), this.playerController.stamina, this.fps);
         if (this.inventoryUI.isOpen) {
             this.inventoryUI.update(this.inventorySystem.getItems());
         }
@@ -205,7 +231,6 @@ export class Game {
         const height = window.innerHeight;
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.setSize(width, height);
     }
 }
